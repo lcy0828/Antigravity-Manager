@@ -343,6 +343,8 @@ impl AxumServer {
             .route("/proxy/mapping", post(admin_update_model_mapping))
             .route("/proxy/api-key/generate", post(admin_generate_api_key))
             .route("/proxy/session-bindings/clear", post(admin_clear_proxy_session_bindings))
+            .route("/proxy/rate-limits", delete(admin_clear_all_rate_limits))
+            .route("/proxy/rate-limits/:accountId", delete(admin_clear_rate_limit))
             .route(
                 "/proxy/preferred-account",
                 get(admin_get_preferred_account).post(admin_set_preferred_account),
@@ -1096,6 +1098,27 @@ async fn admin_clear_proxy_session_bindings(
     state.token_manager.clear_all_sessions();
     logger::log_info("[API] 已清除所有会话绑定");
     StatusCode::OK
+}
+
+async fn admin_clear_all_rate_limits(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    state.token_manager.clear_all_rate_limits();
+    logger::log_info("[API] 已清除所有限流记录");
+    StatusCode::OK
+}
+
+async fn admin_clear_rate_limit(
+    State(state): State<AppState>,
+    Path(account_id): Path<String>,
+) -> impl IntoResponse {
+    let cleared = state.token_manager.clear_rate_limit(&account_id);
+    if cleared {
+        logger::log_info(&format!("[API] 已清除账号 {} 的限流记录", account_id));
+        StatusCode::OK
+    } else {
+        StatusCode::NOT_FOUND
+    }
 }
 
 async fn admin_get_preferred_account(
@@ -1897,16 +1920,14 @@ async fn admin_prepare_oauth_url_web(
 }
 
 /// 辅助函数：获取 OAuth 重定向 URI
-/// 优先使用 ABV_PUBLIC_URL 环境变量 (例如 https://abv.example.com)
-fn get_oauth_redirect_uri(port: u16, host: Option<&str>, proto: Option<&str>) -> String {
+/// 强制使用 localhost，以绕过 Google 2.0 政策对 IP 地址和非 HTTPS 环境的拦截。
+/// 只有在显式设置了 ABV_PUBLIC_URL (例如用户配置了 HTTPS 域名) 时才会使用外部地址。
+fn get_oauth_redirect_uri(port: u16, _host: Option<&str>, _proto: Option<&str>) -> String {
     if let Ok(public_url) = std::env::var("ABV_PUBLIC_URL") {
         let base = public_url.trim_end_matches('/');
         format!("{}/auth/callback", base)
-    } else if let Some(host) = host {
-        // 如果提供了 host (从 Header 中提取)，动态构建重定向地址
-        let scheme = proto.unwrap_or("http");
-        format!("{}://{}/auth/callback", scheme, host)
     } else {
+        // 强制返回 localhost。远程部署时，用户可通过回填功能完成授权。
         format!("http://localhost:{}/auth/callback", port)
     }
 }
