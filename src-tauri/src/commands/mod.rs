@@ -41,18 +41,29 @@ pub async fn add_account(
 }
 
 /// 删除账号
+/// 删除账号
 #[tauri::command]
-pub async fn delete_account(app: tauri::AppHandle, account_id: String) -> Result<(), String> {
+pub async fn delete_account(
+    app: tauri::AppHandle,
+    proxy_state: tauri::State<'_, crate::commands::proxy::ProxyServiceState>,
+    account_id: String,
+) -> Result<(), String> {
     let service = modules::account_service::AccountService::new(
         crate::modules::integration::SystemManager::Desktop(app.clone())
     );
-    service.delete_account(&account_id)
+    service.delete_account(&account_id)?;
+
+    // Reload token pool
+    let _ = crate::commands::proxy::reload_proxy_accounts(proxy_state).await;
+
+    Ok(())
 }
 
 /// 批量删除账号
 #[tauri::command]
 pub async fn delete_accounts(
     app: tauri::AppHandle,
+    proxy_state: tauri::State<'_, crate::commands::proxy::ProxyServiceState>,
     account_ids: Vec<String>,
 ) -> Result<(), String> {
     modules::logger::log_info(&format!(
@@ -66,6 +77,10 @@ pub async fn delete_accounts(
 
     // 强制同步托盘
     crate::modules::tray::update_tray_menus(&app);
+
+    // Reload token pool
+    let _ = crate::commands::proxy::reload_proxy_accounts(proxy_state).await;
+
     Ok(())
 }
 
@@ -321,6 +336,8 @@ pub async fn save_config(
         instance.axum_server.update_zai(&config.proxy).await;
         // 更新实验性配置
         instance.axum_server.update_experimental(&config.proxy).await;
+        // 更新熔断配置
+        instance.token_manager.update_circuit_breaker_config(config.circuit_breaker.clone()).await;
         tracing::debug!("已同步热更新反代服务配置");
     }
 
@@ -540,6 +557,20 @@ pub async fn get_data_dir_path() -> Result<String, String> {
 #[tauri::command]
 pub async fn show_main_window(window: tauri::Window) -> Result<(), String> {
     window.show().map_err(|e| e.to_string())
+}
+
+/// 设置窗口主题（用于同步 Windows 标题栏按钮颜色）
+#[tauri::command]
+pub async fn set_window_theme(window: tauri::Window, theme: String) -> Result<(), String> {
+    use tauri::Theme;
+
+    let tauri_theme = match theme.as_str() {
+        "dark" => Some(Theme::Dark),
+        "light" => Some(Theme::Light),
+        _ => None, // system default
+    };
+
+    window.set_theme(tauri_theme).map_err(|e| e.to_string())
 }
 
 /// 获取 Antigravity 可执行文件路径
