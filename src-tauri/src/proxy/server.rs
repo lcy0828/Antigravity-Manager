@@ -23,8 +23,16 @@ use tracing::{debug, error};
 // TokenManager 在 get_token 时会检查并处理这些账号
 static PENDING_RELOAD_ACCOUNTS: OnceLock<std::sync::RwLock<HashSet<String>>> = OnceLock::new();
 
+// [NEW] 全局待删除账号队列 (Issue #1477)
+// 当账号被删除后，将账号 ID 加入此队列，TokenManager 在 get_token 时会检查并清理内存缓存
+static PENDING_DELETE_ACCOUNTS: OnceLock<std::sync::RwLock<HashSet<String>>> = OnceLock::new();
+
 fn get_pending_reload_accounts() -> &'static std::sync::RwLock<HashSet<String>> {
     PENDING_RELOAD_ACCOUNTS.get_or_init(|| std::sync::RwLock::new(HashSet::new()))
+}
+
+fn get_pending_delete_accounts() -> &'static std::sync::RwLock<HashSet<String>> {
+    PENDING_DELETE_ACCOUNTS.get_or_init(|| std::sync::RwLock::new(HashSet::new()))
 }
 
 /// 触发账号重新加载信号（供 update_account_quota 调用）
@@ -38,6 +46,17 @@ pub fn trigger_account_reload(account_id: &str) {
     }
 }
 
+/// 触发账号删除信号 (Issue #1477)
+pub fn trigger_account_delete(account_id: &str) {
+    if let Ok(mut pending) = get_pending_delete_accounts().write() {
+        pending.insert(account_id.to_string());
+        tracing::debug!(
+            "[Proxy] Queued account {} for cache removal",
+            account_id
+        );
+    }
+}
+
 /// 获取并清空待重新加载的账号列表（供 TokenManager 调用）
 pub fn take_pending_reload_accounts() -> Vec<String> {
     if let Ok(mut pending) = get_pending_reload_accounts().write() {
@@ -45,6 +64,22 @@ pub fn take_pending_reload_accounts() -> Vec<String> {
         if !accounts.is_empty() {
             tracing::debug!(
                 "[Quota] Taking {} pending accounts for reload",
+                accounts.len()
+            );
+        }
+        accounts
+    } else {
+        Vec::new()
+    }
+}
+
+/// 获取并清空待删除的账号列表 (Issue #1477)
+pub fn take_pending_delete_accounts() -> Vec<String> {
+    if let Ok(mut pending) = get_pending_delete_accounts().write() {
+        let accounts: Vec<String> = pending.drain().collect();
+        if !accounts.is_empty() {
+            tracing::debug!(
+                "[Proxy] Taking {} pending accounts for cache removal",
                 accounts.len()
             );
         }
@@ -182,6 +217,8 @@ pub struct AxumServer {
     pub cloudflared_state: Arc<crate::commands::cloudflared::CloudflaredState>,
     pub is_running: Arc<RwLock<bool>>,
     pub token_manager: Arc<TokenManager>, // [NEW] 暴露出 TokenManager 供反代服务复用
+    pub proxy_pool_state: Arc<tokio::sync::RwLock<crate::proxy::config::ProxyPoolConfig>>, // [NEW] 代理池配置状态
+    pub proxy_pool_manager: Arc<crate::proxy::proxy_pool::ProxyPoolManager>, // [NEW] 暴露代理池管理器供命令调用
 }
 
 impl AxumServer {
@@ -198,6 +235,13 @@ impl AxumServer {
         let mut proxy = self.proxy_state.write().await;
         *proxy = new_config;
         tracing::info!("上游代理配置已热更新");
+    }
+
+    /// 更新代理池配置
+    pub async fn update_proxy_pool(&self, new_config: crate::proxy::config::ProxyPoolConfig) {
+        let mut pool = self.proxy_pool_state.write().await;
+        *pool = new_config;
+        tracing::info!("代理池配置已热更新");
     }
 
     pub async fn update_security(&self, config: &crate::proxy::config::ProxyConfig) {
@@ -251,11 +295,18 @@ impl AxumServer {
         monitor: Arc<crate::proxy::monitor::ProxyMonitor>,
         experimental_config: crate::proxy::config::ExperimentalConfig,
         debug_logging: crate::proxy::config::DebugLoggingConfig,
+
         integration: crate::modules::integration::SystemManager,
         cloudflared_state: Arc<crate::commands::cloudflared::CloudflaredState>,
+        proxy_pool_config: crate::proxy::config::ProxyPoolConfig, // [NEW]
     ) -> Result<(Self, tokio::task::JoinHandle<()>), String> {
         let custom_mapping_state = Arc::new(tokio::sync::RwLock::new(custom_mapping));
         let proxy_state = Arc::new(tokio::sync::RwLock::new(upstream_proxy.clone()));
+        let proxy_pool_state = Arc::new(tokio::sync::RwLock::new(proxy_pool_config));
+        let proxy_pool_manager = crate::proxy::proxy_pool::init_global_proxy_pool(proxy_pool_state.clone());
+    
+    // Start health check loop
+    proxy_pool_manager.clone().start_health_check_loop();
         let security_state = Arc::new(RwLock::new(security_config));
         let zai_state = Arc::new(RwLock::new(zai_config));
         let provider_rr = Arc::new(AtomicUsize::new(0));
@@ -273,9 +324,10 @@ impl AxumServer {
             )),
             upstream_proxy: proxy_state.clone(),
             upstream: {
-                let u = Arc::new(crate::proxy::upstream::client::UpstreamClient::new(Some(
-                    upstream_proxy.clone(),
-                )));
+                let u = Arc::new(crate::proxy::upstream::client::UpstreamClient::new(
+                    Some(upstream_proxy.clone()),
+                    Some(proxy_pool_manager.clone()),
+                ));
                 // 初始化 User-Agent 覆盖
                 if user_agent_override.is_some() {
                     u.set_user_agent_override(user_agent_override).await;
@@ -372,13 +424,17 @@ impl AxumServer {
             .route("/v1/api/event_logging/batch", post(silent_ok_handler))
             .route("/v1/api/event_logging", post(silent_ok_handler))
             // 应用 AI 服务特定的层
-            .layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            ))
+            // 注意：Axum layer 执行顺序是从下往上（洋葱模型）
+            // 请求: ip_filter -> auth -> monitor -> handler
+            // 响应: handler -> monitor -> auth -> ip_filter
+            // monitor 需要在 auth 之后执行才能获取 UserTokenIdentity
             .layer(axum::middleware::from_fn_with_state(
                 state.clone(),
                 monitor_middleware,
+            ))
+            .layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                auth_middleware,
             ))
             .layer(axum::middleware::from_fn_with_state(
                 state.clone(),
@@ -484,6 +540,12 @@ impl AxumServer {
             .route("/logs/count", get(admin_get_proxy_logs_count_filtered))
             .route("/logs/clear", post(admin_clear_proxy_logs))
             .route("/logs/:logId", get(admin_get_proxy_log_detail))
+            // Debug Console (Log Bridge)
+            .route("/debug/enable", post(admin_enable_debug_console))
+            .route("/debug/disable", post(admin_disable_debug_console))
+            .route("/debug/enabled", get(admin_is_debug_console_enabled))
+            .route("/debug/logs", get(admin_get_debug_console_logs))
+            .route("/debug/logs/clear", post(admin_clear_debug_console_logs))
             .route("/stats/token/clear", post(admin_clear_token_stats))
             .route("/stats/token/hourly", get(admin_get_token_stats_hourly))
             .route("/stats/token/daily", get(admin_get_token_stats_daily))
@@ -617,6 +679,8 @@ impl AxumServer {
             cloudflared_state,
             is_running: is_running_state,
             token_manager: token_manager.clone(),
+            proxy_pool_state,
+            proxy_pool_manager,
         };
 
         // 在新任务中启动服务器
@@ -2958,4 +3022,31 @@ async fn admin_update_security_config(
 
     Ok(StatusCode::OK)
 }
+
+// --- Debug Console Handlers ---
+
+async fn admin_enable_debug_console() -> impl IntoResponse {
+    crate::modules::log_bridge::enable_log_bridge();
+    StatusCode::OK
+}
+
+async fn admin_disable_debug_console() -> impl IntoResponse {
+    crate::modules::log_bridge::disable_log_bridge();
+    StatusCode::OK
+}
+
+async fn admin_is_debug_console_enabled() -> impl IntoResponse {
+    Json(crate::modules::log_bridge::is_log_bridge_enabled())
+}
+
+async fn admin_get_debug_console_logs() -> impl IntoResponse {
+    let logs = crate::modules::log_bridge::get_buffered_logs();
+    Json(logs)
+}
+
+async fn admin_clear_debug_console_logs() -> impl IntoResponse {
+    crate::modules::log_bridge::clear_log_buffer();
+    StatusCode::OK
+}
+
 

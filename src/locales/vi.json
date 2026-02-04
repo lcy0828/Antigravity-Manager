@@ -36,7 +36,13 @@
         "disabled": "Đã tắt",
         "tauri_api_not_loaded": "Tauri API chưa được tải, vui lòng khởi động lại ứng dụng",
         "environment_error": "Lỗi môi trường: {{error}}",
-        "submit": "Gửi"
+        "submit": "Gửi",
+        "update": "Cập nhật",
+        "load_failed": "Tải thất bại",
+        "create_success": "Tạo thành công",
+        "update_success": "Cập nhật thành công",
+        "delete_success": "Xóa thành công",
+        "copied": "Đã sao chép vào bộ nhớ tạm"
     },
     "nav": {
         "dashboard": "Tổng quan",
@@ -339,6 +345,59 @@
         },
         "proxy": {
             "title": "Cài đặt Proxy"
+        },
+        "proxy_pool": {
+            "title": "Proxy Pool",
+            "strategy_priority": "Priority",
+            "strategy_round_robin": "Round Robin",
+            "strategy_random": "Random",
+            "strategy_least_connections": "Least Connections",
+            "test_all": "Test All",
+            "batch_import": "Import",
+            "binding_manager": "Bindings",
+            "add_proxy": "Add Proxy",
+            "edit_proxy": "Edit Proxy",
+            "name": "Name",
+            "url": "Proxy URL",
+            "username": "Username",
+            "password": "Password",
+            "max_accounts": "Max Accounts",
+            "max_accounts_hint": "0 = Unlimited",
+            "priority": "Priority",
+            "priority_hint": "Lower is better",
+            "health_check_url": "Health Check URL",
+            "tags": "Tags",
+            "add_tag_placeholder": "Add tag...",
+            "seconds": "Sec",
+            "test_completed": "Health check completed",
+            "test_failed": "Health check failed",
+            "confirm_delete": "Are you sure you want to delete this proxy?",
+            "empty": "No proxies available",
+            "column_priority": "Priority",
+            "column_status": "Status",
+            "column_details": "Proxy Details",
+            "column_bindings": "Bindings",
+            "import_title": "Batch Import Proxies",
+            "import_label": "Paste Proxy List (One per line)",
+            "import_hint": "Supported formats: protocol://user:pass@host:port, host:port:user:pass",
+            "import_preview": "Preview",
+            "import_confirm": "Import {{count}} Proxies",
+            "no_valid_proxies": "No valid proxies found",
+            "binding": {
+                "title": "Account Proxy Bindings",
+                "load_failed": "Failed to load bindings",
+                "unbind_success": "Unbound successfully",
+                "bind_success": "Bound successfully",
+                "update_failed": "Failed to update binding",
+                "assigned_proxy": "Assigned Proxy",
+                "default_strategy": "Default (Follow Strategy)"
+            },
+            "status": {
+                "inactive": "Inactive",
+                "checking": "Checking",
+                "healthy": "Healthy",
+                "timeout": "Timeout"
+            }
         },
         "advanced": {
             "title": "Cài đặt Nâng cao",
@@ -915,8 +974,15 @@
     },
     "update_notification": {
         "title": "Có phiên bản mới",
-        "message": "Có phiên bản mới với các tối ưu hóa và cải thiện. Hiện tại: v{{current}}",
-        "action": "Cập nhật ngay"
+        "message": "Một phiên bản mới đã sẵn sàng với các tối ưu hóa và cải tiến. Hiện tại: v{{current}}",
+        "ready": "Cập nhật đã sẵn sàng",
+        "downloading": "Đang tải bản cập nhật...",
+        "restarting": "Đang khởi động lại ứng dụng...",
+        "auto_update": "Cập nhật tự động",
+        "toast": {
+            "not_ready": "Gói cập nhật tự động chưa sẵn sàng, đang chuyển hướng bạn đến trang tải xuống...",
+            "failed": "Cập nhật tự động thất bại, đang chuyển hướng bạn đến trang tải xuống..."
+        }
     },
     "login": {
         "title": "Kiểm soát truy cập an toàn",
@@ -1047,5 +1113,39 @@
             "save_success": "Đã lưu cấu hình",
             "save_error": "Không thể lưu cấu hình"
         }
+    },
+    "user_token": {
+        "title": "Quản lý Token Người dùng",
+        "total_users": "Tổng số Người dùng",
+        "active_tokens": "Token Đang hoạt động",
+        "total_created": "Tổng số đã tạo",
+        "create": "Tạo Token",
+        "username": "Tên người dùng",
+        "token": "Token",
+        "expires": "Hết hạn",
+        "usage": "Sử dụng",
+        "ip_limit": "Giới hạn IP",
+        "created": "Đã tạo lúc",
+        "today_requests": "Yêu cầu Hôm nay",
+        "never": "Không bao giờ",
+        "renew": "Gia hạn",
+        "renew_button": "Gia hạn",
+        "unlimited": "Không giới hạn",
+        "create_title": "Tạo Token Mới",
+        "description": "Mô tả",
+        "curfew": "Giờ giới nghiêm (Thời gian không khả dụng)",
+        "edit_title": "Chỉnh sửa Token",
+        "username_required": "Yêu cầu tên người dùng",
+        "renew_success": "Gia hạn thành công",
+        "expires_day": "1 Ngày",
+        "expires_week": "1 Tuần",
+        "expires_month": "1 Tháng",
+        "expires_never": "Không bao giờ",
+        "no_data": "Không tìm thấy token",
+        "placeholder_username": "vd: user1",
+        "placeholder_desc": "Ghi chú tùy chọn",
+        "placeholder_max_ips": "0 = Không giới hạn",
+        "hint_max_ips": "0 nghĩa là không giới hạn",
+        "hint_curfew": "Để trống để tắt. Dựa trên giờ máy chủ."
     }
 }

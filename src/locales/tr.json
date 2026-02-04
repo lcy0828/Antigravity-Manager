@@ -34,7 +34,13 @@
         "disabled": "Devre Dışı",
         "tauri_api_not_loaded": "Tauri API yüklenemedi, lütfen uygulamayı yeniden başlatın",
         "environment_error": "Ortam hatası: {{error}}",
-        "submit": "Gönder"
+        "submit": "Gönder",
+        "update": "Güncelle",
+        "load_failed": "Yükleme başarısız",
+        "create_success": "Başarıyla oluşturuldu",
+        "update_success": "Başarıyla güncellendi",
+        "delete_success": "Başarıyla silindi",
+        "copied": "Panoya kopyalandı"
     },
     "nav": {
         "dashboard": "Kontrol Paneli",
@@ -305,6 +311,59 @@
         },
         "proxy": {
             "title": "Proxy Ayarları"
+        },
+        "proxy_pool": {
+            "title": "Proxy Pool",
+            "strategy_priority": "Priority",
+            "strategy_round_robin": "Round Robin",
+            "strategy_random": "Random",
+            "strategy_least_connections": "Least Connections",
+            "test_all": "Test All",
+            "batch_import": "Import",
+            "binding_manager": "Bindings",
+            "add_proxy": "Add Proxy",
+            "edit_proxy": "Edit Proxy",
+            "name": "Name",
+            "url": "Proxy URL",
+            "username": "Username",
+            "password": "Password",
+            "max_accounts": "Max Accounts",
+            "max_accounts_hint": "0 = Unlimited",
+            "priority": "Priority",
+            "priority_hint": "Lower is better",
+            "health_check_url": "Health Check URL",
+            "tags": "Tags",
+            "add_tag_placeholder": "Add tag...",
+            "seconds": "Sec",
+            "test_completed": "Health check completed",
+            "test_failed": "Health check failed",
+            "confirm_delete": "Are you sure you want to delete this proxy?",
+            "empty": "No proxies available",
+            "column_priority": "Priority",
+            "column_status": "Status",
+            "column_details": "Proxy Details",
+            "column_bindings": "Bindings",
+            "import_title": "Batch Import Proxies",
+            "import_label": "Paste Proxy List (One per line)",
+            "import_hint": "Supported formats: protocol://user:pass@host:port, host:port:user:pass",
+            "import_preview": "Preview",
+            "import_confirm": "Import {{count}} Proxies",
+            "no_valid_proxies": "No valid proxies found",
+            "binding": {
+                "title": "Account Proxy Bindings",
+                "load_failed": "Failed to load bindings",
+                "unbind_success": "Unbound successfully",
+                "bind_success": "Bound successfully",
+                "update_failed": "Failed to update binding",
+                "assigned_proxy": "Assigned Proxy",
+                "default_strategy": "Default (Follow Strategy)"
+            },
+            "status": {
+                "inactive": "Inactive",
+                "checking": "Checking",
+                "healthy": "Healthy",
+                "timeout": "Timeout"
+            }
         },
         "advanced": {
             "title": "Gelişmiş Ayarlar",
@@ -865,9 +924,16 @@
         }
     },
     "update_notification": {
-        "title": "Yeni Sürüm Mevcut",
-        "message": "Optimizasyonlar ve iyileştirmeler içeren yeni bir sürüm hazır. Mevcut: v{{current}}",
-        "action": "Şimdi Güncelle"
+        "title": "Yeni versiyon mevcut",
+        "message": "Optimizasyonlar ve iyileştirmeler içeren yeni bir versiyon hazır. Mevcut: v{{current}}",
+        "ready": "Güncelleme hazır",
+        "downloading": "Güncelleme indiriliyor...",
+        "restarting": "Uygulama yeniden başlatılıyor...",
+        "auto_update": "Otomatik güncelleme",
+        "toast": {
+            "not_ready": "Otomatik güncelleme paketi hazır değil, indirme sayfasına yönlendiriliyorsunuz...",
+            "failed": "Otomatik güncelleme başarısız oldu, indirme sayfasına yönlendiriliyorsunuz..."
+        }
     },
     "login": {
         "title": "Güvenli Erişim Kontrolü",
@@ -998,5 +1064,39 @@
             "save_success": "Yapılandırma kaydedildi",
             "save_error": "Yapılandırma kaydedilemedi"
         }
+    },
+    "user_token": {
+        "title": "Kullanıcı Token Yönetimi",
+        "total_users": "Toplam Kullanıcı",
+        "active_tokens": "Aktif Tokenlar",
+        "total_created": "Toplam Oluşturulan",
+        "create": "Token Oluştur",
+        "username": "Kullanıcı adı",
+        "token": "Token",
+        "expires": "Süre Sonu",
+        "usage": "Kullanım",
+        "ip_limit": "IP Sınırı",
+        "created": "Oluşturulma",
+        "today_requests": "Bugünkü İstekler",
+        "never": "Asla",
+        "renew": "Yenile",
+        "renew_button": "Yenile",
+        "unlimited": "Sınırsız",
+        "create_title": "Yeni Token Oluştur",
+        "description": "Açıklama",
+        "curfew": "Sokağa çıkma yasağı (Kullanılamaz zaman)",
+        "edit_title": "Tokenı Düzenle",
+        "username_required": "Kullanıcı adı zorunludur",
+        "renew_success": "Başarıyla yenilendi",
+        "expires_day": "1 Gün",
+        "expires_week": "1 Hafta",
+        "expires_month": "1 Ay",
+        "expires_never": "Asla",
+        "no_data": "Token bulunamadı",
+        "placeholder_username": "örn: user1",
+        "placeholder_desc": "İsteğe bağlı notlar",
+        "placeholder_max_ips": "0 = Sınırsız",
+        "hint_max_ips": "0 sınırsız demektir",
+        "hint_curfew": "Devre dışı bırakmak için boş bırakın. Sunucu saatine göredir."
     }
 }

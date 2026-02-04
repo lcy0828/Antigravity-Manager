@@ -35,7 +35,13 @@
         "disabled": "Desabilitado",
         "tauri_api_not_loaded": "API Tauri não carregada, por favor reinicie o aplicativo",
         "environment_error": "Erro de ambiente: {{error}}",
-        "submit": "Enviar"
+        "submit": "Enviar",
+        "update": "Atualizar",
+        "load_failed": "Falha ao carregar",
+        "create_success": "Criado com sucesso",
+        "update_success": "Atualizado com sucesso",
+        "delete_success": "Excluído com sucesso",
+        "copied": "Copiado para a área de transferência"
     },
     "nav": {
         "dashboard": "Painel",
@@ -336,6 +342,59 @@
         },
         "proxy": {
             "title": "Configurações do Proxy"
+        },
+        "proxy_pool": {
+            "title": "Proxy Pool",
+            "strategy_priority": "Priority",
+            "strategy_round_robin": "Round Robin",
+            "strategy_random": "Random",
+            "strategy_least_connections": "Least Connections",
+            "test_all": "Test All",
+            "batch_import": "Import",
+            "binding_manager": "Bindings",
+            "add_proxy": "Add Proxy",
+            "edit_proxy": "Edit Proxy",
+            "name": "Name",
+            "url": "Proxy URL",
+            "username": "Username",
+            "password": "Password",
+            "max_accounts": "Max Accounts",
+            "max_accounts_hint": "0 = Unlimited",
+            "priority": "Priority",
+            "priority_hint": "Lower is better",
+            "health_check_url": "Health Check URL",
+            "tags": "Tags",
+            "add_tag_placeholder": "Add tag...",
+            "seconds": "Sec",
+            "test_completed": "Health check completed",
+            "test_failed": "Health check failed",
+            "confirm_delete": "Are you sure you want to delete this proxy?",
+            "empty": "No proxies available",
+            "column_priority": "Priority",
+            "column_status": "Status",
+            "column_details": "Proxy Details",
+            "column_bindings": "Bindings",
+            "import_title": "Batch Import Proxies",
+            "import_label": "Paste Proxy List (One per line)",
+            "import_hint": "Supported formats: protocol://user:pass@host:port, host:port:user:pass",
+            "import_preview": "Preview",
+            "import_confirm": "Import {{count}} Proxies",
+            "no_valid_proxies": "No valid proxies found",
+            "binding": {
+                "title": "Account Proxy Bindings",
+                "load_failed": "Failed to load bindings",
+                "unbind_success": "Unbound successfully",
+                "bind_success": "Bound successfully",
+                "update_failed": "Failed to update binding",
+                "assigned_proxy": "Assigned Proxy",
+                "default_strategy": "Default (Follow Strategy)"
+            },
+            "status": {
+                "inactive": "Inactive",
+                "checking": "Checking",
+                "healthy": "Healthy",
+                "timeout": "Timeout"
+            }
         },
         "advanced": {
             "title": "Configurações Avançadas",
@@ -887,9 +946,16 @@
         }
     },
     "update_notification": {
-        "title": "Nova Versão Disponível",
+        "title": "Nova versão disponível",
         "message": "Uma nova versão está pronta com otimizações e melhorias. Atual: v{{current}}",
-        "action": "Atualizar Agora"
+        "ready": "Atualização pronta",
+        "downloading": "Baixando atualização...",
+        "restarting": "Reiniciando o aplicativo...",
+        "auto_update": "Atualização automática",
+        "toast": {
+            "not_ready": "O pacote de atualização automática não está pronto, redirecionando para a página de download...",
+            "failed": "A atualização automática falhou, redirecionando para a página de download..."
+        }
     },
     "login": {
         "title": "Controle de Acesso Seguro",
@@ -1029,5 +1095,39 @@
             "save_success": "Configuração salva",
             "save_error": "Falha ao salvar configuração"
         }
+    },
+    "user_token": {
+        "title": "Gestão de Tokens de Usuário",
+        "total_users": "Total de Usuários",
+        "active_tokens": "Tokens Ativos",
+        "total_created": "Total Criados",
+        "create": "Criar Token",
+        "username": "Nome de usuário",
+        "token": "Token",
+        "expires": "Expira em",
+        "usage": "Uso",
+        "ip_limit": "Limite de IP",
+        "created": "Criado em",
+        "today_requests": "Solicitações de Hoje",
+        "never": "Nunca",
+        "renew": "Renovar",
+        "renew_button": "Renovar",
+        "unlimited": "Ilimitado",
+        "create_title": "Criar Novo Token",
+        "description": "Descrição",
+        "curfew": "Toque de recolher (Horário indisponível)",
+        "edit_title": "Editar Token",
+        "username_required": "Nome de usuário obrigatório",
+        "renew_success": "Renovado com sucesso",
+        "expires_day": "1 Dia",
+        "expires_week": "1 Semana",
+        "expires_month": "1 Mês",
+        "expires_never": "Nunca",
+        "no_data": "Nenhum token encontrado",
+        "placeholder_username": "ex: user1",
+        "placeholder_desc": "Notas opcionais",
+        "placeholder_max_ips": "0 = Ilimitado",
+        "hint_max_ips": "0 significa ilimitado",
+        "hint_curfew": "Deixe em branco para desativar. Baseado na hora do servidor."
     }
 }

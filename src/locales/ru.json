@@ -36,7 +36,13 @@
         "disabled": "Отключено",
         "tauri_api_not_loaded": "API Tauri не загружен, пожалуйста перезапустите приложение",
         "environment_error": "Ошибка окружения: {{error}}",
-        "submit": "Отправить"
+        "submit": "Отправить",
+        "update": "Обновить",
+        "load_failed": "Ошибка загрузки",
+        "create_success": "Успешно создано",
+        "update_success": "Успешно обновлено",
+        "delete_success": "Успешно удалено",
+        "copied": "Скопировано в буфер обмена"
     },
     "nav": {
         "dashboard": "Дашборд",
@@ -339,6 +345,59 @@
         },
         "proxy": {
             "title": "Настройки прокси"
+        },
+        "proxy_pool": {
+            "title": "Proxy Pool",
+            "strategy_priority": "Priority",
+            "strategy_round_robin": "Round Robin",
+            "strategy_random": "Random",
+            "strategy_least_connections": "Least Connections",
+            "test_all": "Test All",
+            "batch_import": "Import",
+            "binding_manager": "Bindings",
+            "add_proxy": "Add Proxy",
+            "edit_proxy": "Edit Proxy",
+            "name": "Name",
+            "url": "Proxy URL",
+            "username": "Username",
+            "password": "Password",
+            "max_accounts": "Max Accounts",
+            "max_accounts_hint": "0 = Unlimited",
+            "priority": "Priority",
+            "priority_hint": "Lower is better",
+            "health_check_url": "Health Check URL",
+            "tags": "Tags",
+            "add_tag_placeholder": "Add tag...",
+            "seconds": "Sec",
+            "test_completed": "Health check completed",
+            "test_failed": "Health check failed",
+            "confirm_delete": "Are you sure you want to delete this proxy?",
+            "empty": "No proxies available",
+            "column_priority": "Priority",
+            "column_status": "Status",
+            "column_details": "Proxy Details",
+            "column_bindings": "Bindings",
+            "import_title": "Batch Import Proxies",
+            "import_label": "Paste Proxy List (One per line)",
+            "import_hint": "Supported formats: protocol://user:pass@host:port, host:port:user:pass",
+            "import_preview": "Preview",
+            "import_confirm": "Import {{count}} Proxies",
+            "no_valid_proxies": "No valid proxies found",
+            "binding": {
+                "title": "Account Proxy Bindings",
+                "load_failed": "Failed to load bindings",
+                "unbind_success": "Unbound successfully",
+                "bind_success": "Bound successfully",
+                "update_failed": "Failed to update binding",
+                "assigned_proxy": "Assigned Proxy",
+                "default_strategy": "Default (Follow Strategy)"
+            },
+            "status": {
+                "inactive": "Inactive",
+                "checking": "Checking",
+                "healthy": "Healthy",
+                "timeout": "Timeout"
+            }
         },
         "advanced": {
             "title": "Дополнительные настройки",
@@ -895,8 +954,15 @@
     },
     "update_notification": {
         "title": "Доступна новая версия",
-        "message": "Новая версия готова с оптимизациями и улучшениями. Текущая: v{{current}}",
-        "action": "Обновить сейчас"
+        "message": "Подготовлена новая версия с оптимизациями и улучшениями. Текущая: v{{current}}",
+        "ready": "Обновление готово",
+        "downloading": "Загрузка обновления...",
+        "restarting": "Перезапуск приложения...",
+        "auto_update": "Авто-обновление",
+        "toast": {
+            "not_ready": "Пакет автообновления не готов, перенаправляем на страницу загрузки...",
+            "failed": "Автообновление не удалось, перенаправляем на страницу загрузки..."
+        }
     },
     "login": {
         "title": "Управление безопасным доступом",
@@ -1027,5 +1093,39 @@
             "save_success": "Настройки сохранены",
             "save_error": "Ошибка сохранения настроек"
         }
+    },
+    "user_token": {
+        "title": "Управление токенами пользователей",
+        "total_users": "Всего пользователей",
+        "active_tokens": "Активные токены",
+        "total_created": "Всего создано",
+        "create": "Создать токен",
+        "username": "Имя пользователя",
+        "token": "Токен",
+        "expires": "Истекает",
+        "usage": "Использование",
+        "ip_limit": "Лимит IP",
+        "created": "Создан",
+        "today_requests": "Запросы за сегодня",
+        "never": "Никогда",
+        "renew": "Продлить",
+        "renew_button": "Продлить",
+        "unlimited": "Безлимитно",
+        "create_title": "Создание нового токена",
+        "description": "Описание",
+        "curfew": "Комендантский час (время недоступности)",
+        "edit_title": "Редактирование токена",
+        "username_required": "Имя пользователя обязательно",
+        "renew_success": "Успешно продлен",
+        "expires_day": "1 день",
+        "expires_week": "1 неделя",
+        "expires_month": "1 месяц",
+        "expires_never": "Никогда",
+        "no_data": "Токены не найдены",
+        "placeholder_username": "напр. user1",
+        "placeholder_desc": "Необязательные заметки",
+        "placeholder_max_ips": "0 = Безлимитно",
+        "hint_max_ips": "0 означает безлимитно",
+        "hint_curfew": "Оставьте пустым, чтобы отключить. По времени сервера."
     }
 }

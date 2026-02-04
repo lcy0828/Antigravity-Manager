@@ -34,7 +34,13 @@
         "disabled": "Dinyahaktifkan",
         "tauri_api_not_loaded": "API Tauri tidak dimuatkan, sila mulakan semula aplikasi",
         "environment_error": "Ralat persekitaran: {{error}}",
-        "submit": "Hantar"
+        "submit": "Hantar",
+        "update": "Kemas kini",
+        "load_failed": "Gagal dimuatkan",
+        "create_success": "Berjaya dicipta",
+        "update_success": "Berjaya dikemas kini",
+        "delete_success": "Berjaya dipadam",
+        "copied": "Disalin ke papan klip"
     },
     "nav": {
         "dashboard": "Papan Pemuka",
@@ -340,6 +346,59 @@
         },
         "proxy": {
             "title": "Tetapan Proksi"
+        },
+        "proxy_pool": {
+            "title": "Proxy Pool",
+            "strategy_priority": "Priority",
+            "strategy_round_robin": "Round Robin",
+            "strategy_random": "Random",
+            "strategy_least_connections": "Least Connections",
+            "test_all": "Test All",
+            "batch_import": "Import",
+            "binding_manager": "Bindings",
+            "add_proxy": "Add Proxy",
+            "edit_proxy": "Edit Proxy",
+            "name": "Name",
+            "url": "Proxy URL",
+            "username": "Username",
+            "password": "Password",
+            "max_accounts": "Max Accounts",
+            "max_accounts_hint": "0 = Unlimited",
+            "priority": "Priority",
+            "priority_hint": "Lower is better",
+            "health_check_url": "Health Check URL",
+            "tags": "Tags",
+            "add_tag_placeholder": "Add tag...",
+            "seconds": "Sec",
+            "test_completed": "Health check completed",
+            "test_failed": "Health check failed",
+            "confirm_delete": "Are you sure you want to delete this proxy?",
+            "empty": "No proxies available",
+            "column_priority": "Priority",
+            "column_status": "Status",
+            "column_details": "Proxy Details",
+            "column_bindings": "Bindings",
+            "import_title": "Batch Import Proxies",
+            "import_label": "Paste Proxy List (One per line)",
+            "import_hint": "Supported formats: protocol://user:pass@host:port, host:port:user:pass",
+            "import_preview": "Preview",
+            "import_confirm": "Import {{count}} Proxies",
+            "no_valid_proxies": "No valid proxies found",
+            "binding": {
+                "title": "Account Proxy Bindings",
+                "load_failed": "Failed to load bindings",
+                "unbind_success": "Unbound successfully",
+                "bind_success": "Bound successfully",
+                "update_failed": "Failed to update binding",
+                "assigned_proxy": "Assigned Proxy",
+                "default_strategy": "Default (Follow Strategy)"
+            },
+            "status": {
+                "inactive": "Inactive",
+                "checking": "Checking",
+                "healthy": "Healthy",
+                "timeout": "Timeout"
+            }
         },
         "advanced": {
             "title": "Tetapan Lanjutan",
@@ -889,7 +948,14 @@
     "update_notification": {
         "title": "Versi Baharu Tersedia",
         "message": "Versi baharu sudah sedia dengan pengoptimuman dan penambahbaikan. Semasa: v{{current}}",
-        "action": "Kemas Kini Sekarang"
+        "ready": "Kemas Kini Sedia",
+        "downloading": "Memuat turun kemas kini...",
+        "restarting": "Memulakan semula aplikasi...",
+        "auto_update": "Kemas Kini Automatik",
+        "toast": {
+            "not_ready": "Pakej kemas kini automatik belum sedia, mengarahkan anda ke halaman muat turun...",
+            "failed": "Kemas kini automatik gagal, mengarahkan anda ke halaman muat turun..."
+        }
     },
     "login": {
         "title": "Kawalan Akses Selamat",
@@ -935,5 +1001,39 @@
             "stream_error": "Ralat penghantaran strim, sila cuba semula kemudian",
             "unknown_error": "Ralat tidak diketahui berlaku, sila cuba semula kemudian"
         }
+    },
+    "user_token": {
+        "title": "Pengurusan Token Pengguna",
+        "total_users": "Jumlah Pengguna",
+        "active_tokens": "Token Aktif",
+        "total_created": "Jumlah Dicipta",
+        "create": "Cipta Token",
+        "username": "Nama pengguna",
+        "token": "Token",
+        "expires": "Tamat Tempoh",
+        "usage": "Penggunaan",
+        "ip_limit": "Had IP",
+        "created": "Dicipta pada",
+        "today_requests": "Permintaan Hari Ini",
+        "never": "Selasma",
+        "renew": "Perbaharui",
+        "renew_button": "Perbaharui",
+        "unlimited": "Tanpa had",
+        "create_title": "Cipta Token Baharu",
+        "description": "Penerangan",
+        "curfew": "Waktu perintah berkurung (Perkhidmatan tidak tersedia)",
+        "edit_title": "Sunting Token",
+        "username_required": "Nama pengguna diperlukan",
+        "renew_success": "Berjaya diperbaharui",
+        "expires_day": "1 Hari",
+        "expires_week": "1 Minggu",
+        "expires_month": "1 Bulan",
+        "expires_never": "Selasma",
+        "no_data": "Tiada token ditemui",
+        "placeholder_username": "cth. user1",
+        "placeholder_desc": "Nota pilihan",
+        "placeholder_max_ips": "0 = Tanpa had",
+        "hint_max_ips": "0 bermaksud tanpa had",
+        "hint_curfew": "Biarkan kosong untuk nyahaktifkan. Berdasarkan masa pelayan."
     }
 }
