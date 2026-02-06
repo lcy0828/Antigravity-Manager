@@ -1,5 +1,5 @@
 # Antigravity Tools 🚀
-> 专业的 AI 账号管理与协议反代系统 (v4.1.3)
+> 专业的 AI 账号管理与协议反代系统 (v4.1.5)
 <div align="center">
   <img src="public/icon.png" alt="Antigravity Logo" width="120" height="120" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
 
@@ -8,7 +8,7 @@
   
   <p>
     <a href="https://github.com/lbjlaq/Antigravity-Manager">
-      <img src="https://img.shields.io/badge/Version-4.1.3-blue?style=flat-square" alt="Version">
+      <img src="https://img.shields.io/badge/Version-4.1.5-blue?style=flat-square" alt="Version">
     </a>
     <img src="https://img.shields.io/badge/Tauri-v2-orange?style=flat-square" alt="Tauri">
     <img src="https://img.shields.io/badge/Backend-Rust-red?style=flat-square" alt="Rust">
@@ -361,6 +361,67 @@ response = client.chat.completions.create(
 ## 📝 开发者与社区
 
 *   **版本演进 (Changelog)**:
+    *   **v4.1.5 (2026-02-05)**:
+        -   **[安全修复] 前端 API Key 存储迁移 (LocalStorage -> SessionStorage)**:
+            -   **存储机制升级**: 将 Admin API Key 的存储位置从持久化的 `localStorage` 迁移至会话级的 `sessionStorage`，显著降低了在公共设备上的安全风险。
+            -   **自动无感迁移**: 实现了自动检测与迁移逻辑。系统会识别旧的 `localStorage` 密钥，将其自动转移到 `sessionStorage` 并彻底清除旧数据，确保现有用户无缝过渡且消除安全隐患。
+        -   **[核心修复] 修复 Docker 环境下添加账号失败问题 (Issue #1583)**:
+            -   **账号上下文修复**: 修复了在添加新账号时 `account_id` 为 `None` 导致代理选择异常的问题。现在系统会为新账号生成临时 UUID,确保所有 OAuth 请求都有明确的账号上下文。
+            -   **日志增强**: 优化了 `refresh_access_token` 和 `get_effective_client` 的日志记录,提供更详细的代理选择信息,帮助诊断 Docker 环境下的网络问题。
+            -   **影响范围**: 修复了 Docker 部署环境下通过 Refresh Token 添加账号时可能出现的长时间挂起或失败问题。
+        -   **[核心修复] Web Mode 兼容性修复 & 403 账号轮换优化 (PR #1585)**:
+            -   **Security API Web Mode 兼容性修复 (Issue: 400/422 错误)**:
+                -   为 `IpAccessLogQuery` 添加 `page` 和 `page_size` 的默认值,解决 `/api/security/logs` 返回 400 Bad Request 的问题
+                -   移除 `AddBlacklistWrapper` 和 `AddWhitelistWrapper` 结构体,解决 `/api/security/blacklist` 和 `/api/security/whitelist` POST 返回 422 Unprocessable Content 的问题
+                -   前端组件参数名修正:`ipPattern` → `ip_pattern`,确保与后端 API 参数一致
+            -   **403 账号轮换优化 (Issue: 403 后未正确跳过账号)**:
+                -   在 `token_manager.rs` 中添加 `set_forbidden` 方法,支持标记账号为禁用状态
+                -   账号选择时检查 `quota.is_forbidden` 状态,自动跳过被禁用的账号
+                -   403 时清除该账号的 sticky session 绑定,确保立即切换到其他可用账号
+            -   **Web Mode 请求处理优化**:
+                -   `request.ts` 修复路径参数替换后从 body 中移除已使用的参数,避免重复传参
+                -   支持 PATCH 方法的 body 处理,补全 HTTP 方法支持
+                -   自动解包 `request` 字段,简化请求结构
+            -   **Debug Console Web Mode 支持**:
+                -   `useDebugConsole.ts` 添加 `isTauri` 环境检测,区分 Tauri 和 Web 环境
+                -   Web 模式下使用 `request()` 替代 `invoke()`,确保 Web 环境下的正常调用
+                -   添加轮询机制,Web 模式下每 2 秒自动刷新日志
+            -   **Docker 构建优化**:
+                -   添加 `--legacy-peer-deps` 标志,解决前端依赖冲突
+                -   启用 BuildKit 缓存加速 Cargo 构建,提升构建速度
+                -   补全 `@lobehub/icons` peer dependencies,修复前端依赖缺失导致的构建失败
+            -   **影响范围**: 此更新显著提升了 Docker/Web 模式下的稳定性和可用性,解决了 Security API 报错、403 账号轮换失效、Debug Console 不可用等问题,同时优化了 Docker 构建流程。
+        -   **[核心修复] 修复 Web/Docker 模式下调试控制台崩溃与日志同步问题 (Issue #1574)**:
+            -   **Web 兼容性**: 修复了在非 Tauri 环境下直接调用原生 `invoke` API 导致的 `TypeError` 崩溃。现在通过兼容性请求层进行后端通信。
+            -   **指纹绑定修复**: 修复了生成指纹并绑定时,由于前后端参数结构不匹配导致的 `HTTP Error 422` 报错。通过调整后端包装类,使其兼容前端嵌套的 `profile` 对象。
+            -   **日志轮询机制**: 为 Web 模式引入了自动日志轮询功能(2秒/次),解决了浏览器端无法接收 Rust 后端事件推送导致调试日志为空的问题。
+        -   **[核心优化] 补全 Tauri 命令的 HTTP API 映射**:
+            -   **全量适配**: 对齐了 30+ 个原生 Tauri 命令,为缓存管理(清理日志/应用缓存)、系统路径获取、代理池配置、用户令牌管理等核心功能补全了 HTTP 映射,确保 Web/Docker 版本的功能完整性。
+        -   **[安全修复] 任意文件读写漏洞加固**:
+            -   **API 安全层**: 彻底移除了高危接口 `/api/system/save-file` 及其关联函数,并在数据库导入接口中增加了路径遍历防范 (`..` 校验)。
+            -   **Tauri 安全增强**: 为 `save_text_file` 和 `read_text_file` 命令引入了统一的路径校验器,严禁目录遍历并封堵了系统敏感目录的访问权限。
+    *   **v4.1.4 (2026-02-05)**:
+        -   **[核心功能] 代理池持久化与账号筛选优化 (PR #1565)**:
+            -   **持久化增强**: 修复了代理池绑定在反代服务重启或重载时无法正确恢复的问题，确保绑定关系严格持久化。
+            -   **智能筛选**: 优化了 `TokenManager` 的账号获取逻辑,在全量加载、同步以及调度路径中增加了对 `disabled` 和 `proxy_disabled` 状态的深度校验，彻底杜绝已禁用账号被误选的问题。
+            -   **验证阻止支持**: 引入了 `validation_blocked` 字段体系，专门处理 Google 的 `VALIDATION_REQUIRED` (403 临时风控) 场景，实现了基于截止时间的智能自动绕过。
+            -   **状态清理加固**: 账号失效时同步清理内存令牌、限流记录、会话绑定及优先账号标志，保证内部状态机的一致性。
+        -   **[核心修复] 修复 Web/Docker 模式下的关键兼容性问题 (Issue #1574)**:
+            -   **调试模式修复**: 修正了前端调试控制台 URL 映射错误（移除多余的 `/proxy` 路径），解决了 Web 模式下调试模式无法开启的问题。
+            -   **指纹绑定修复**: 为 `admin_bind_device_profile_with_profile` 接口增加了 `BindDeviceProfileWrapper` 结构，修复了前端发送嵌套参数导致的 HTTP 422 错误。
+            -   **向后兼容性**: 使用 `serde alias` 功能在 API 层同时支持 camelCase（前端）和 snake_case（后端文件），确保旧账号文件正常加载。
+        -   **[代码优化] 简化 API 处理结构**:
+            -   移除了多个管理 API 路由（如 IP 黑白名单管理、安全设置更新等）中的冗余包装层 (`Wrapper`)，直接解构业务模型，提升了代码的简洁性与开发效率。
+        -   **[核心修复] 解决 OpenCode 调用 Thinking 模型中断问题 (Issue #1575)**:
+            -   **finish_reason 强制修正**: 修复了工具调用时 `finish_reason` 被错误设置为 `stop` 导致 OpenAI 客户端提前终止对话的问题。现在系统会强制将有工具调用的响应 `finish_reason` 设置为 `tool_calls`，确保工具循环正常运行。
+            -   **工具参数标准化**: 实现了 shell 工具参数名称的自动标准化，将 Gemini 可能生成的 `cmd`/`code`/`script` 等非标准参数名统一转换为 `command`，提升了工具调用的兼容性。
+            -   **影响范围**: 修复了 OpenAI 协议下 Thinking 模型（如 `claude-sonnet-4-5-thinking`）的工具调用流程，解决了 OpenCode 等客户端的中断问题。
+    *   **v4.1.4 (2026-02-05)**:
+        - **Bug 修复 (Bug Fixes)**:
+            - **Gemini 原生协议图像生成参数支持 (Issue #1573)**: 修复了使用 Gemini 原生协议时 `generationConfig.imageConfig` 参数被忽略的问题。现在系统能正确解析并应用 `aspectRatio` 和 `imageSize` 等图像配置参数。
+                - **优先级策略**: 优先从请求体的 `generationConfig.imageConfig` 解析参数，保留模型名后缀作为向后兼容方案。
+                - **协议一致性**: 确保 Gemini、OpenAI、Claude 三大协议在图像生成场景下的参数处理逻辑统一。
+                - **影响范围**: 修复了 9 个文件的调用链，包括 `common_utils.rs`、`gemini.rs`、`wrapper.rs` 等核心模块。
     *   **v4.1.3 (2026-02-05)**:
         -   **[核心修复] 解决 Web/Docker 模式下安全配置与 IP 管理失效问题 (Issue #1560)**:
             -   **协议对齐**: 修复了后端 Axum 接口无法解析前端 `invoke` 封装的嵌套参数格式（如 `{"config": ...}`）的问题，确保安全配置能正确持久化。

@@ -24,7 +24,8 @@ pub fn transform_openai_request(
         &mapped_model_lower,
         &tools_val,
         request.size.as_deref(),    // [NEW] Pass size parameter
-        request.quality.as_deref()  // [NEW] Pass quality parameter
+        request.quality.as_deref(), // [NEW] Pass quality parameter
+        None,  // OpenAI uses size/quality params, not body.imageConfig
     );
 
     // [FIX] 仅当模型名称显式包含 "-thinking" 时才视为 Gemini 思维模型
@@ -633,7 +634,8 @@ pub fn transform_openai_request(
             obj.remove("systemInstruction");
             let gen_config = obj.entry("generationConfig").or_insert_with(|| json!({}));
             if let Some(gen_obj) = gen_config.as_object_mut() {
-                gen_obj.remove("thinkingConfig");
+                // [REMOVED] thinkingConfig 拦截已删除，允许图像生成时输出思维链
+                // gen_obj.remove("thinkingConfig");
                 gen_obj.remove("responseMimeType");
                 gen_obj.remove("responseModalities");
                 gen_obj.insert("imageConfig".to_string(), image_config);

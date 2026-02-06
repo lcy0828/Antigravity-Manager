@@ -1,6 +1,6 @@
 # Antigravity Tools 🚀
 # Antigravity Tools 🚀
-> Professional AI Account Management & Protocol Proxy System (v4.1.3)
+> Professional AI Account Management & Protocol Proxy System (v4.1.5)
 
 <div align="center">
   <img src="public/icon.png" alt="Antigravity Logo" width="120" height="120" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
@@ -10,7 +10,7 @@
   
   <p>
     <a href="https://github.com/lbjlaq/Antigravity-Manager">
-      <img src="https://img.shields.io/badge/Version-4.1.3-blue?style=flat-square" alt="Version">
+      <img src="https://img.shields.io/badge/Version-4.1.5-blue?style=flat-square" alt="Version">
     </a>
     <img src="https://img.shields.io/badge/Tauri-v2-orange?style=flat-square" alt="Tauri">
     <img src="https://img.shields.io/badge/Backend-Rust-red?style=flat-square" alt="Rust">
@@ -249,6 +249,67 @@ print(response.choices[0].message.content)
 ## 📝 Developer & Community
 
 *   **Changelog**:
+    *   **v4.1.5 (2026-02-05)**:
+        -   **[Security Fix] Frontend API Key Storage Migration (LocalStorage -> SessionStorage)**:
+            -   **Storage Upgrade**: Migrated the storage of the Admin API Key from persistent `localStorage` to session-based `sessionStorage`, significantly reducing security risks on shared devices.
+            -   **Seamless Auto-Migration**: Implemented automatic detection and migration logic. The system identifies legacy `localStorage` keys, automatically transfers them to `sessionStorage`, and securely wipes the old data, ensuring a seamless transition and eliminating security vulnerabilities for existing users.
+        -   **[Core Fix] Fix Account Addition Failure in Docker Environment (Issue #1583)**:
+            -   **Account Context Fix**: Fixed the proxy selection issue caused by `account_id` being `None` when adding new accounts. The system now generates a temporary UUID for new accounts to ensure all OAuth requests have a clear account context.
+            -   **Enhanced Logging**: Optimized logging in `refresh_access_token` and `get_effective_client` to provide more detailed proxy selection information, helping diagnose network issues in Docker environments.
+            -   **Impact Scope**: Resolved the long hang or failure issue when adding accounts via Refresh Token in Docker deployment environments.
+        -   **[Core Fix] Web Mode Compatibility Fixes & 403 Account Rotation Optimization (PR #1585)**:
+            -   **Security API Web Mode Compatibility Fix (Issue: 400/422 Errors)**:
+                -   Added default values for `page` and `page_size` in `IpAccessLogQuery`, resolving 400 Bad Request errors from `/api/security/logs`
+                -   Removed `AddBlacklistWrapper` and `AddWhitelistWrapper` structs, fixing 422 Unprocessable Content errors from `/api/security/blacklist` and `/api/security/whitelist` POST requests
+                -   Fixed frontend component parameter naming: `ipPattern` → `ip_pattern`, ensuring consistency with backend API parameters
+            -   **403 Account Rotation Optimization (Issue: Accounts Not Properly Skipped After 403)**:
+                -   Added `set_forbidden` method in `token_manager.rs` to support marking accounts as disabled
+                -   Account selection now checks `quota.is_forbidden` status, automatically skipping disabled accounts
+                -   Clears sticky session bindings for 403 accounts, ensuring immediate switch to other available accounts
+            -   **Web Mode Request Processing Optimization**:
+                -   Fixed `request.ts` to remove used parameters from body after path parameter replacement, avoiding duplicate parameters
+                -   Added PATCH method body handling, completing HTTP method support
+                -   Automatic unpacking of `request` field, simplifying request structure
+            -   **Debug Console Web Mode Support**:
+                -   Added `isTauri` environment detection in `useDebugConsole.ts`, distinguishing between Tauri and Web environments
+                -   Web mode uses `request()` instead of `invoke()`, ensuring proper calls in Web environment
+                -   Added polling mechanism, automatically refreshing logs every 2 seconds in Web mode
+            -   **Docker Build Optimization**:
+                -   Added `--legacy-peer-deps` flag, resolving frontend dependency conflicts
+                -   Enabled BuildKit cache to accelerate Cargo builds, improving build speed
+                -   Completed `@lobehub/icons` peer dependencies, fixing build failures caused by missing frontend dependencies
+            -   **Impact Scope**: This update significantly improves stability and usability in Docker/Web mode, resolving Security API errors, 403 account rotation failures, Debug Console unavailability, and optimizing the Docker build process.
+        -   **[Core Fix] Fix Debug Console Crash and Log Sync in Web/Docker Mode (Issue #1574)**:
+            -   **Web Compatibility**: Fixed `TypeError` crashes caused by direct calls to native `invoke` APIs in non-Tauri environments. Communication now flows through the compatibility request layer.
+            -   **Fingerprint Binding Fix**: Resolved `HTTP Error 422` when generating and binding fingerprints by aligning the parameter structure between frontend and backend (nested `profile` object support).
+            -   **Log Polling Mechanism**: Introduced automatic log polling (every 2 seconds) for Web mode, overcoming the limitation where browser clients cannot receive Rust event pushes, ensuring logs are correctly displayed.
+        -   **[Core Optimization] Complete Tauri Command to HTTP API Mappings**:
+            -   **Full Adaptation**: Aligned 30+ native Tauri commands with HTTP APIs, completing mappings for cache management, system paths, proxy pool configuration, and user token management, ensuring full functional parity between Desktop and Web modes.
+        -   **[Security Fix] Arbitrary File Write Vulnerability Hardening**:
+            -   **API Security Layer**: Completely removed the high-risk endpoint `/api/system/save-file` and its associated handlers. Added path traversal prevention (`..` check) to the database import interface.
+            -   **Tauri Security Hardening**: Introduced a unified path validator for `save_text_file` and `read_text_file` commands, strictly forbidding directory traversal and blocking access to sensitive system paths.
+    *   **v4.1.4 (2026-02-05)**:
+        -   **[Core Feature] Proxy Pool Persistence & Account Filtering Optimization (PR #1565)**:
+            -   **Persistence Enhancement**: Fixed an issue where proxy pool bindings were not correctly restored after proxy service restart or reload, ensuring strict persistence of binding relationships.
+            -   **Intelligent Filtering**: Optimized account acquisition logic in `TokenManager`. Added deep validation for `disabled` and `proxy_disabled` statuses in loading, syncing, and scheduling paths to prevent disabled accounts from being mistakenly selected.
+            -   **Validation Block Support**: Introduced the `validation_blocked` field system to handle Google's `VALIDATION_REQUIRED` (403 temporary risk control) scenarios, implementing intelligent automatic bypass based on expiration time.
+            -   **State Cleanup Fortification**: Synchronized cleanup of memory tokens, rate limit records, session bindings, and preferred account flags when an account becomes invalid, ensuring consistency of the internal state machine.
+        -   **[Core Fix] Fix Critical Compatibility Issues in Web/Docker Mode (Issue #1574)**:
+            -   **Debug Mode Fix**: Corrected frontend debug console URL mapping errors (removed redundant `/proxy` path), resolving the issue where debug mode could not be enabled in Web mode.
+            -   **Fingerprint Binding Fix**: Added `BindDeviceProfileWrapper` structure for the `admin_bind_device_profile_with_profile` interface, fixing HTTP 422 errors caused by nested parameters sent from the frontend.
+            -   **Backward Compatibility**: Used `serde alias` feature to support both camelCase (frontend) and snake_case (backend files) at the API layer, ensuring old account files load correctly.
+        -   **[Code Optimization] Simplified API Handling Structure**:
+            -   Removed redundant `Wrapper` layers in multiple management API routes (e.g., IP blacklist/whitelist management, security setting updates), directly destructuring business models to improve code conciseness and development efficiency.
+        -   **[Core Fix] Resolve OpenCode Thinking Model Interruption Issue (Issue #1575)**:
+            -   **finish_reason Enforcement**: Fixed the issue where `finish_reason` was incorrectly set to `stop` during tool calls, causing OpenAI clients to prematurely terminate conversations. The system now forcibly sets `finish_reason` to `tool_calls` when tool calls are present, ensuring proper tool loop execution.
+            -   **Tool Parameter Standardization**: Implemented automatic standardization of shell tool parameter names, converting non-standard names like `cmd`/`code`/`script` (which Gemini may generate) to the standard `command` parameter, improving tool call compatibility.
+            -   **Impact Scope**: Fixed the tool call workflow for Thinking models (e.g., `claude-sonnet-4-5-thinking`) under the OpenAI protocol, resolving interruption issues in clients like OpenCode.
+    *   **v4.1.4 (2026-02-05)**:
+        - **Bug Fixes**:
+            - **Gemini Native Protocol Image Generation Parameter Support (Issue #1573)**: Fixed the issue where `generationConfig.imageConfig` parameters were ignored when using the Gemini native protocol. The system now correctly parses and applies image configuration parameters such as `aspectRatio` and `imageSize`.
+                - **Priority Strategy**: Prioritizes parsing parameters from the request body's `generationConfig.imageConfig`, while retaining model name suffix as a backward-compatible fallback.
+                - **Protocol Consistency**: Ensures unified parameter handling logic for image generation across Gemini, OpenAI, and Claude protocols.
+                - **Impact Scope**: Fixed the call chain across 9 files, including core modules like `common_utils.rs`, `gemini.rs`, and `wrapper.rs`.
     *   **v4.1.3 (2026-02-05)**:
         -   **[Core Fix] Resolve Security Config and IP Management Failures in Web/Docker Mode (Issue #1560)**:
             -   **Protocol Alignment**: Fixed the issue where the backend Axum interface could not parse nested parameter formats (e.g., `{"config": ...}`) wrapped by the frontend `invoke` method, ensuring security configurations are correctly persisted.
