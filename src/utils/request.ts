@@ -18,6 +18,7 @@ const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POST' | 'D
   'warm_up_accounts': { url: '/api/accounts/warmup', method: 'POST' },
   'warm_up_all_accounts': { url: '/api/accounts/warmup', method: 'POST' },
   'warm_up_account': { url: '/api/accounts/:accountId/warmup', method: 'POST' },
+  'update_account_label': { url: '/api/accounts/:accountId/label', method: 'POST' },
   'export_accounts': { url: '/api/accounts/export', method: 'POST' },
   'bind_device_profile': { url: '/api/accounts/:accountId/bind-device', method: 'POST' },
   'get_device_profiles': { url: '/api/accounts/:accountId/device-profiles', method: 'GET' },
@@ -65,6 +66,12 @@ const COMMAND_MAPPING: Record<string, { url: string; method: 'GET' | 'POST' | 'D
   'execute_cli_sync': { url: '/api/proxy/cli/sync', method: 'POST' },
   'execute_cli_restore': { url: '/api/proxy/cli/restore', method: 'POST' },
   'get_cli_config_content': { url: '/api/proxy/cli/config', method: 'POST' },
+
+  // OpenCode Sync
+  'get_opencode_sync_status': { url: '/api/proxy/opencode/status', method: 'POST' },
+  'execute_opencode_sync': { url: '/api/proxy/opencode/sync', method: 'POST' },
+  'execute_opencode_restore': { url: '/api/proxy/opencode/restore', method: 'POST' },
+  'get_opencode_config_content': { url: '/api/proxy/opencode/config', method: 'POST' },
 
   // Stats
   'get_token_stats_hourly': { url: '/api/stats/token/hourly', method: 'GET' },

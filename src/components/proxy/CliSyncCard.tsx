@@ -12,13 +12,18 @@ import {
     Eye,
     RotateCcw,
     Copy,
-    X
+    X,
+    Bot
 } from 'lucide-react';
 import { copyToClipboard } from '../../utils/clipboard';
 import { request as invoke } from '../../utils/request';
 import { showToast } from '../common/ToastContainer';
 import ModalDialog from '../common/ModalDialog';
 import { cn } from '../../utils/cn';
+import { DroidSyncModal } from './DroidSyncModal';
+import { OpenCodeSyncModal } from './OpenCodeSyncModal';
+import { useProxyModels } from '../../hooks/useProxyModels';
+import GroupedSelect from '../common/GroupedSelect';
 
 interface CliSyncCardProps {
     proxyUrl: string;
@@ -26,7 +31,7 @@ interface CliSyncCardProps {
     className?: string;
 }
 
-type CliAppType = 'Claude' | 'Codex' | 'Gemini';
+type CliAppType = 'Claude' | 'Codex' | 'Gemini' | 'OpenCode' | 'Droid';
 
 interface CliStatus {
     installed: boolean;
@@ -35,6 +40,7 @@ interface CliStatus {
     has_backup: boolean;
     current_base_url: string | null;
     files: string[];
+    synced_count?: number;
 }
 
 export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) => {
@@ -42,17 +48,32 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
     const [statuses, setStatuses] = useState<Record<CliAppType, CliStatus | null>>({
         Claude: null,
         Codex: null,
-        Gemini: null
+        Gemini: null,
+        OpenCode: null,
+        Droid: null
     });
     const [loading, setLoading] = useState<Record<CliAppType, boolean>>({
         Claude: false,
         Codex: false,
-        Gemini: false
+        Gemini: false,
+        OpenCode: false,
+        Droid: false
     });
     const [syncing, setSyncing] = useState<Record<CliAppType, boolean>>({
         Claude: false,
         Codex: false,
-        Gemini: false
+        Gemini: false,
+        OpenCode: false,
+        Droid: false
+    });
+    const [syncAccounts, setSyncAccounts] = useState(false);
+    const [droidSyncModal, setDroidSyncModal] = useState(false);
+    const [selectedModels, setSelectedModels] = useState<Record<CliAppType, string>>({
+        Claude: 'claude-3-5-sonnet-latest',
+        Codex: 'gpt-4o',
+        Gemini: 'gemini-1.5-pro',
+        OpenCode: '',
+        Droid: ''
     });
     const [viewingConfig, setViewingConfig] = useState<{
         app: CliAppType,
@@ -62,6 +83,15 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
     } | null>(null);
     const [restoreConfirmApp, setRestoreConfirmApp] = useState<CliAppType | null>(null);
     const [syncConfirmApp, setSyncConfirmApp] = useState<CliAppType | null>(null);
+    const [openCodeSyncModal, setOpenCodeSyncModal] = useState(false);
+
+    const { models: proxyModels } = useProxyModels();
+
+    const modelOptions = proxyModels.map(m => ({
+        value: m.id,
+        label: m.name,
+        group: m.group || 'General'
+    }));
 
     // 根据不同的 CLI 应用格式化 Proxy URL
     const getFormattedProxyUrl = useCallback((app: CliAppType) => {
@@ -79,10 +109,20 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
         setLoading(prev => ({ ...prev, [app]: true }));
         try {
             const formattedUrl = getFormattedProxyUrl(app);
-            const status = await invoke<CliStatus>('get_cli_sync_status', {
-                appType: app,
-                proxyUrl: formattedUrl
-            });
+            let command: string;
+            let params: Record<string, unknown>;
+            if (app === 'Droid') {
+                command = 'get_droid_sync_status';
+                params = { proxyUrl: formattedUrl };
+            } else if (app === 'OpenCode') {
+                command = 'get_opencode_sync_status';
+                params = { proxyUrl: formattedUrl };
+            } else {
+                command = 'get_cli_sync_status';
+                params = { appType: app, proxyUrl: formattedUrl };
+            }
+
+            const status = await invoke<CliStatus>(command, params);
             setStatuses(prev => ({ ...prev, [app]: status }));
         } catch (error) {
             console.error(`Failed to check ${app} status:`, error);
@@ -91,7 +131,15 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
         }
     }, [getFormattedProxyUrl]);
 
-    const handleSync = (app: CliAppType) => {
+    const handleSync = async (app: CliAppType) => {
+        if (app === 'Droid') {
+            setDroidSyncModal(true);
+            return;
+        }
+        if (app === 'OpenCode') {
+            setOpenCodeSyncModal(true);
+            return;
+        }
         setSyncConfirmApp(app);
     };
 
@@ -105,18 +153,18 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
             return;
         }
 
-        setSyncing(prev => ({ ...prev, [app]: true }));
         try {
             const formattedUrl = getFormattedProxyUrl(app);
-            await invoke('execute_cli_sync', {
-                appType: app,
-                proxyUrl: formattedUrl,
-                apiKey: apiKey
-            });
-            showToast(t('proxy.cli_sync.toast.sync_success', { name: app }), 'success');
+            const command = app === 'OpenCode' ? 'execute_opencode_sync' : 'execute_cli_sync';
+            const params = app === 'OpenCode'
+                ? { proxyUrl: formattedUrl, apiKey: apiKey, syncAccounts: syncAccounts }
+                : { appType: app, proxyUrl: formattedUrl, apiKey: apiKey, model: selectedModels[app] };
+
+            await invoke(command, params);
+            showToast(t(app === 'OpenCode' ? 'proxy.opencode_sync.toast.sync_success' : 'proxy.cli_sync.toast.sync_success', { name: app, defaultValue: `${app} synced successfully` }), 'success');
             await checkStatus(app);
         } catch (error: any) {
-            showToast(t('proxy.cli_sync.toast.sync_error', { name: app, error: error.toString() }), 'error');
+            showToast(t(app === 'OpenCode' ? 'proxy.opencode_sync.toast.sync_error' : 'proxy.cli_sync.toast.sync_error', { name: app, error: error.toString(), defaultValue: `Sync failed: ${error.toString()}` }), 'error');
         } finally {
             setSyncing(prev => ({ ...prev, [app]: false }));
         }
@@ -133,7 +181,9 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
 
         setSyncing(prev => ({ ...prev, [app]: true }));
         try {
-            await invoke('execute_cli_restore', { appType: app });
+            const command = app === 'Droid' ? 'execute_droid_restore' : app === 'OpenCode' ? 'execute_opencode_restore' : 'execute_cli_restore';
+            const params = (app === 'Droid' || app === 'OpenCode') ? {} : { appType: app };
+            await invoke(command, params);
             showToast(t('common.success'), 'success');
             await checkStatus(app);
         } catch (error: any) {
@@ -149,10 +199,20 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
             if (!status) return;
 
             const targetFile = fileName || status.files[0];
-            const content = await invoke<string>('get_cli_config_content', {
-                appType: app,
-                fileName: targetFile
-            });
+            let command: string;
+            let params: Record<string, unknown>;
+            if (app === 'Droid') {
+                command = 'get_droid_config_content';
+                params = {};
+            } else if (app === 'OpenCode') {
+                command = 'get_opencode_config_content';
+                params = { request: { fileName: targetFile } };
+            } else {
+                command = 'get_cli_config_content';
+                params = { appType: app, fileName: targetFile };
+            }
+
+            const content = await invoke<string>(command, params);
             setViewingConfig({
                 app,
                 content,
@@ -168,6 +228,8 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
         checkStatus('Claude');
         checkStatus('Codex');
         checkStatus('Gemini');
+        checkStatus('OpenCode');
+        checkStatus('Droid');
     }, [checkStatus]);
 
     const renderCliItem = (app: CliAppType, icon: React.ReactNode, name: string) => {
@@ -231,22 +293,57 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
                         </div>
                     </div>
 
+                    {/* Claude, Codex, Gemini 的模型选择 */}
+                    {status?.installed && (app === 'Claude' || app === 'Codex' || app === 'Gemini') && (
+                        <div className="space-y-1">
+                            <div className="text-[9px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider px-1">
+                                {t('proxy.cli_sync.model_select', { defaultValue: 'Select Model' })}
+                            </div>
+                            <GroupedSelect
+                                value={selectedModels[app]}
+                                onChange={(val) => setSelectedModels(prev => ({ ...prev, [app]: val }))}
+                                options={modelOptions}
+                                className="w-full !h-8 !text-[11px] !rounded-lg"
+                                allowCustomInput={true}
+                            />
+                        </div>
+                    )}
+
+                    {/* OpenCode 独有的账号同步选项 */}
+                    {app === 'OpenCode' && status?.installed && (
+                        <div className="flex items-center gap-2 p-2 bg-gray-50/50 dark:bg-gray-900/20 rounded-lg">
+                            <input
+                                type="checkbox"
+                                id="opencode-sync-accounts"
+                                checked={syncAccounts}
+                                onChange={(e) => setSyncAccounts(e.target.checked)}
+                                className="checkbox checkbox-xs checkbox-primary"
+                            />
+                            <label htmlFor="opencode-sync-accounts" className="text-[10px] text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+                                {t('proxy.opencode_sync.sync_accounts', { defaultValue: 'Sync accounts to antigravity-accounts.json' })}
+                            </label>
+                        </div>
+                    )}
+
                     <div className="flex items-center gap-2">
                         {status?.installed && (
                             <>
-                                <button
-                                    onClick={() => handleViewConfig(app)}
-                                    className="btn btn-sm btn-square btn-ghost border border-gray-200 dark:border-white/10 text-gray-500 hover:text-blue-500 hover:bg-white dark:hover:bg-gray-700"
-                                    title={t('proxy.cli_sync.btn_view')}
-                                >
-                                    <Eye size={16} />
-                                </button>
+                                {/* 对于 OpenCode，如果未同步，则不显示查看按钮（因为文件尚未生成，后端会报错） */}
+                                {(app !== 'OpenCode' || status?.is_synced) && (
+                                    <button
+                                        onClick={() => handleViewConfig(app)}
+                                        className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                        title={t(app === 'OpenCode' ? 'proxy.opencode_sync.btn_view' : 'proxy.cli_sync.btn_view', { defaultValue: 'View Config' })}
+                                    >
+                                        <Eye size={14} />
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => handleRestore(app)}
-                                    className="btn btn-sm btn-square btn-ghost border border-gray-200 dark:border-white/10 text-gray-500 hover:text-orange-500 hover:bg-white dark:hover:bg-gray-700"
-                                    title={status.has_backup ? t('proxy.cli_sync.btn_restore_backup') : t('proxy.cli_sync.btn_restore')}
+                                    className="p-1 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors"
+                                    title={t(app === 'OpenCode' ? 'proxy.opencode_sync.btn_restore' : 'proxy.cli_sync.btn_restore', { defaultValue: 'Restore' })}
                                 >
-                                    <RotateCcw size={16} />
+                                    <RotateCcw size={14} />
                                 </button>
                             </>
                         )}
@@ -287,10 +384,12 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {renderCliItem('Claude', <CodeXml size={20} className="text-purple-500" />, 'Claude Code')}
                 {renderCliItem('Codex', <Cpu size={20} className="text-blue-500" />, 'Codex AI')}
                 {renderCliItem('Gemini', <Globe size={20} className="text-green-500" />, 'Gemini CLI')}
+                {renderCliItem('OpenCode', <CodeXml size={20} className="text-blue-500" />, 'OpenCode')}
+                {renderCliItem('Droid', <Bot size={20} className="text-orange-500" />, 'Droid')}
             </div>
 
             {/* Config Viewer Modal */}
@@ -375,6 +474,31 @@ export const CliSyncCard = ({ proxyUrl, apiKey, className }: CliSyncCardProps) =
                 onCancel={() => setSyncConfirmApp(null)}
                 isDestructive={true}
             />
+
+            {/* Droid 模型添加弹窗 */}
+            {droidSyncModal && (
+                <DroidSyncModal
+                    proxyUrl={proxyUrl}
+                    apiKey={apiKey}
+                    getFormattedProxyUrl={getFormattedProxyUrl}
+                    onClose={() => setDroidSyncModal(false)}
+                    onSyncDone={() => checkStatus('Droid')}
+                />
+            )}
+
+            {/* OpenCode 模型选择弹窗 */}
+            {openCodeSyncModal && (
+                <OpenCodeSyncModal
+                    proxyUrl={proxyUrl}
+                    apiKey={apiKey}
+                    getFormattedProxyUrl={getFormattedProxyUrl}
+                    onClose={() => setOpenCodeSyncModal(false)}
+                    onSyncDone={() => checkStatus('OpenCode')}
+                />
+            )}
         </div>
     );
 };
+
+
+export default CliSyncCard;

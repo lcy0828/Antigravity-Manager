@@ -22,6 +22,7 @@ use crate::proxy::server::AppState;
 use crate::proxy::mappers::context_manager::ContextManager;
 use crate::proxy::mappers::estimation_calibrator::get_calibrator;
 use crate::proxy::debug_logger;
+use crate::proxy::upstream::client::mask_email;
 use crate::proxy::common::client_adapter::CLIENT_ADAPTERS; // [NEW] Import Adapter Registry
 use axum::http::HeaderMap;
 use std::sync::{atomic::Ordering, Arc};
@@ -730,7 +731,7 @@ pub async fn handle_messages(
 
         // Upstream call configuration continued...
 
-        let response = match upstream
+        let call_result = match upstream
             .call_v1_internal_with_headers(method, &access_token, gemini_body, query, extra_headers.clone(), Some(account_id.as_str()))
             .await {
             Ok(r) => r,
@@ -740,7 +741,32 @@ pub async fn handle_messages(
                 continue;
             }
         };
-        
+
+        // [NEW] 记录端点降级日志到 debug 文件
+        if !call_result.fallback_attempts.is_empty() && debug_logger::is_enabled(&debug_cfg) {
+            let fallback_entries: Vec<Value> = call_result.fallback_attempts.iter().map(|a| {
+                json!({
+                    "endpoint_url": a.endpoint_url,
+                    "status": a.status,
+                    "error": a.error,
+                })
+            }).collect();
+            let payload = json!({
+                "kind": "endpoint_fallback",
+                "protocol": "anthropic",
+                "trace_id": trace_id,
+                "original_model": request.model,
+                "mapped_model": request_with_mapped.model,
+                "attempt": attempt,
+                "account": mask_email(&email),
+                "fallback_attempts": fallback_entries,
+            });
+            debug_logger::write_debug_payload(&debug_cfg, Some(&trace_id), "endpoint_fallback", &payload).await;
+        }
+
+        let response = call_result.response;
+        // [NEW] 提取实际请求的上游端点 URL，用于日志记录和排查
+        let upstream_url = response.url().to_string();
         let status = response.status();
         last_status = status;
         
@@ -762,6 +788,7 @@ pub async fn handle_messages(
                     "request_type": config.request_type,
                     "attempt": attempt,
                     "status": status.as_u16(),
+                    "upstream_url": upstream_url,
                 });
                 let gemini_stream = debug_logger::wrap_reqwest_stream_with_debug(
                     Box::pin(response.bytes_stream()),
@@ -974,6 +1001,8 @@ pub async fn handle_messages(
                 "request_type": config.request_type,
                 "attempt": attempt,
                 "status": status_code,
+                "upstream_url": upstream_url,
+                "account": mask_email(&email),
                 "error_text": error_text,
             });
             debug_logger::write_debug_payload(&debug_cfg, Some(&trace_id), "upstream_response_error", &payload).await;
@@ -1072,6 +1101,8 @@ pub async fn handle_messages(
                 m = m.replace("-thinking", "");
                 if m.contains("claude-sonnet-4-5-") {
                     m = "claude-sonnet-4-5".to_string();
+                } else if m.contains("claude-opus-4-6-") {
+                    m = "claude-opus-4-6".to_string();
                 } else if m.contains("claude-opus-4-5-") || m.contains("claude-opus-4-") {
                     m = "claude-opus-4-5".to_string();
                 }
@@ -1094,8 +1125,33 @@ pub async fn handle_messages(
         // 5. 统一处理所有可重试错误
         // [REMOVED] 不再特殊处理 QUOTA_EXHAUSTED,允许账号轮换
         // 原逻辑会在第一个账号配额耗尽时直接返回,导致"平衡"模式无法切换账号
-        
-        
+
+        // [FIX] 403 时设置 is_forbidden 状态，避免账号被重复选中
+        if status_code == 403 {
+            // Check for VALIDATION_REQUIRED error - temporarily block account
+            if error_text.contains("VALIDATION_REQUIRED") ||
+               error_text.contains("verify your account") ||
+               error_text.contains("validation_url")
+            {
+                tracing::warn!(
+                    "[Claude] VALIDATION_REQUIRED detected on account {}, temporarily blocking",
+                    email
+                );
+                let block_minutes = 10i64;
+                let block_until = chrono::Utc::now().timestamp() + (block_minutes * 60);
+                if let Err(e) = token_manager.set_validation_block_public(&account_id, block_until, &error_text).await {
+                    tracing::error!("Failed to set validation block: {}", e);
+                }
+            }
+
+            // 设置 is_forbidden 状态
+            if let Err(e) = token_manager.set_forbidden(&account_id, &error_text).await {
+                tracing::error!("Failed to set forbidden status for {}: {}", email, e);
+            } else {
+                tracing::warn!("[Claude] Account {} marked as forbidden due to 403", email);
+            }
+        }
+
         // 确定重试策略
         let strategy = determine_retry_strategy(status_code, &error_text, retried_without_thinking);
         
@@ -1126,7 +1182,10 @@ pub async fn handle_messages(
 
             // 不可重试的错误，直接返回
             error!("[{}] Non-retryable error {}: {}", trace_id, status_code, error_text);
-            return (status, [("X-Account-Email", email.as_str())], error_text).into_response();
+            return (status, [
+                ("X-Account-Email", email.as_str()),
+                ("X-Mapped-Model", request_with_mapped.model.as_str())
+            ], error_text).into_response();
         }
     }
     
@@ -1150,7 +1209,14 @@ pub async fn handle_messages(
             _ => "api_error",
         };
 
-        (last_status, headers, Json(json!({
+        // [FIX] 403 时返回 503，避免 Claude Code 客户端退出到登录页
+        let response_status = if last_status.as_u16() == 403 {
+            StatusCode::SERVICE_UNAVAILABLE
+        } else {
+            last_status
+        };
+
+        (response_status, headers, Json(json!({
             "type": "error",
             "error": {
                 "id": "err_retry_exhausted",
@@ -1166,7 +1232,7 @@ pub async fn handle_messages(
                 headers.insert("X-Mapped-Model", v);
              }
         }
-        
+
         let error_type = match last_status.as_u16() {
             400 => "invalid_request_error",
             401 => "authentication_error",
@@ -1176,7 +1242,14 @@ pub async fn handle_messages(
             _ => "api_error",
         };
 
-        (last_status, headers, Json(json!({
+        // [FIX] 403 时返回 503，避免 Claude Code 客户端退出到登录页
+        let response_status = if last_status.as_u16() == 403 {
+            StatusCode::SERVICE_UNAVAILABLE
+        } else {
+            last_status
+        };
+
+        (response_status, headers, Json(json!({
             "type": "error",
             "error": {
                 "id": "err_retry_exhausted",

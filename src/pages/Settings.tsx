@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Github, User, MessageCircle, ExternalLink, RefreshCw, Heart, Coffee } from 'lucide-react';
+import { Save, Github, User, MessageCircle, ExternalLink, RefreshCw, Heart, Coffee, LayoutDashboard, Users, Network, Activity, BarChart3, Settings as SettingsIcon, Lock, CheckCircle2, Globe } from 'lucide-react';
 import { request as invoke } from '../utils/request';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useConfigStore } from '../stores/useConfigStore';
@@ -9,7 +9,6 @@ import { showToast } from '../components/common/ToastContainer';
 import QuotaProtection from '../components/settings/QuotaProtection';
 import SmartWarmup from '../components/settings/SmartWarmup';
 import PinnedQuotaModels from '../components/settings/PinnedQuotaModels';
-import ThinkingBudget from '../components/settings/ThinkingBudget';
 import { useDebugConsole } from '../stores/useDebugConsole';
 
 import { useTranslation } from 'react-i18next';
@@ -50,7 +49,8 @@ function Settings() {
                 proxies: [],
                 health_check_interval: 300,
                 auto_failover: true,
-                strategy: 'priority'
+                strategy: 'priority',
+                account_bindings: {}
             }
         },
         scheduled_warmup: {
@@ -69,6 +69,7 @@ function Settings() {
             enabled: false,
             backoff_steps: [30, 60, 120, 300, 600]
         },
+        hidden_menu_items: [],  // 菜单显示设置：默认不隐藏任何菜单项
 
     });
 
@@ -526,6 +527,101 @@ function Settings() {
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{t('settings.general.update_check_interval_desc')}</p>
                                     </div>
                                 )}
+
+                                {/* 菜单显示设置 */}
+                                <div className="border-t border-gray-200 dark:border-base-200 pt-6 mt-6">
+                                    <h3 className="font-medium text-gray-900 dark:text-base-content mb-3">菜单显示设置</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                        选择要在菜单栏中显示的功能项。隐藏不常用的菜单可以节省空间。
+                                    </p>
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                        {[
+                                            { path: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
+                                            { path: '/accounts', label: t('nav.accounts'), icon: Users },
+                                            { path: '/api-proxy', label: t('nav.proxy'), icon: Network },
+                                            { path: '/monitor', label: t('nav.call_records'), icon: Activity },
+                                            { path: '/token-stats', label: t('nav.token_stats', 'Token 统计'), icon: BarChart3 },
+                                            { path: '/user-token', label: t('nav.user_token', 'User Tokens'), icon: Users },
+                                            { path: '/security', label: t('nav.security'), icon: Lock },
+                                            { path: '/settings', label: t('nav.settings'), icon: SettingsIcon },
+                                        ].map((item) => {
+                                            const hiddenItems = formData.hidden_menu_items || [];
+                                            const isVisible = !hiddenItems.includes(item.path);
+                                            const isSettings = item.path === '/settings';
+
+                                            return (
+                                                <div
+                                                    key={item.path}
+                                                    onClick={async () => {
+                                                        if (!isSettings) {
+                                                            const originalConfig = { ...formData };
+                                                            const hiddenItems = formData.hidden_menu_items || [];
+                                                            const newHiddenItems = isVisible
+                                                                ? [...hiddenItems, item.path]
+                                                                : hiddenItems.filter(p => p !== item.path);
+
+                                                            // 乐观更新 UI
+                                                            const newConfig = {
+                                                                ...formData,
+                                                                hidden_menu_items: newHiddenItems
+                                                            };
+                                                            setFormData(newConfig);
+
+                                                            // 尝试保存
+                                                            try {
+                                                                await saveConfig(newConfig);
+                                                            } catch (error) {
+                                                                // 保存失败，回滚到原始快照
+                                                                setFormData(originalConfig);
+                                                                showToast(`保存失败，已恢复设置: ${error}`, 'error');
+                                                            }
+                                                        }
+                                                    }}
+                                                    className={`
+                                                        relative flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all cursor-pointer select-none
+                                                        ${isSettings
+                                                            ? 'bg-gray-50 dark:bg-base-200 border-gray-100 dark:border-base-300 opacity-60 cursor-not-allowed'
+                                                            : isVisible
+                                                                ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-500 dark:border-blue-500 shadow-sm'
+                                                                : 'bg-white dark:bg-base-100 border-gray-200 dark:border-base-300 hover:border-gray-300 dark:hover:border-base-content/20 text-gray-500'
+                                                        }
+                                                    `}
+                                                >
+                                                    {/* 选中标记 */}
+                                                    {isVisible && (
+                                                        <div className="absolute top-2 right-2 text-blue-500">
+                                                            <CheckCircle2 size={16} fill="currentColor" className="text-white dark:text-base-100" />
+                                                        </div>
+                                                    )}
+
+                                                    {isSettings && (
+                                                        <div className="absolute top-2 right-2 text-xs font-bold text-gray-400 bg-gray-200 dark:bg-base-300 px-1.5 py-0.5 rounded">
+                                                            必选
+                                                        </div>
+                                                    )}
+
+                                                    <div className={`
+                                                        p-3 rounded-xl transition-colors
+                                                        ${isVisible
+                                                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                                            : 'bg-gray-100 dark:bg-base-200 text-gray-400 dark:text-base-content/50'
+                                                        }
+                                                    `}>
+                                                        <item.icon size={24} />
+                                                    </div>
+
+                                                    <span className={`font-medium text-sm ${isVisible ? 'text-blue-900 dark:text-blue-100' : 'text-gray-500'}`}>
+                                                        {item.label}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 flex items-center gap-1.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                                        被选中的项目将显示在顶部菜单栏中
+                                    </p>
+                                </div>
                             </>
                         </div>
                     )}
@@ -897,19 +993,6 @@ function Settings() {
                                     </div>
                                 </div>
 
-                                {/* Thinking Budget 设置 */}
-                                <div className="border-t border-gray-200 dark:border-base-200 pt-4">
-                                    <ThinkingBudget
-                                        config={formData.proxy?.thinking_budget || { mode: 'auto', custom_value: 24576 }}
-                                        onChange={(newConfig) => setFormData({
-                                            ...formData,
-                                            proxy: {
-                                                ...formData.proxy,
-                                                thinking_budget: newConfig,
-                                            },
-                                        })}
-                                    />
-                                </div>
                             </div>
                         </>
                     )}
@@ -998,6 +1081,79 @@ function Settings() {
                                         .catch(err => console.error('Save failed:', err));
                                 }}
                             />
+
+                            {/* [FIX #1701] 恢复全局上游代理设置 */}
+                            <div className="group bg-white dark:bg-base-100 rounded-xl p-5 border border-gray-100 dark:border-base-200 hover:border-blue-200 transition-all duration-300 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 -mr-12 -mt-12 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors"></div>
+                                <div className="flex items-center justify-between mb-5 relative z-10">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300 shadow-sm">
+                                            <Globe size={18} />
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">{t('proxy.config.upstream_proxy.title', '全局上游代理 (Global Proxy)')}</div>
+                                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight max-w-[280px]">
+                                                {t('proxy.config.upstream_proxy.desc_short', '用于无法匹配代理池账号时的通用出口或降级方案。')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer scale-90">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={formData.proxy?.upstream_proxy?.enabled ?? false}
+                                            onChange={(e) => setFormData({
+                                                ...formData,
+                                                proxy: {
+                                                    ...formData.proxy,
+                                                    upstream_proxy: {
+                                                        ...formData.proxy?.upstream_proxy,
+                                                        enabled: e.target.checked
+                                                    }
+                                                }
+                                            })}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 dark:bg-base-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 shadow-inner"></div>
+                                    </label>
+                                </div>
+
+                                {formData.proxy?.upstream_proxy?.enabled && (
+                                    <div className="space-y-4 animate-in slide-in-from-top-2 duration-300 relative z-10">
+                                        <div className="pt-4 border-t border-gray-50 dark:border-base-300">
+                                            <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2.5">
+                                                {t('proxy.config.upstream_proxy.url', '代理地址')}
+                                            </label>
+                                            <div className="relative group/input">
+                                                <input
+                                                    type="text"
+                                                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-base-200 border border-gray-100 dark:border-base-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-medium transition-all shadow-inner"
+                                                    placeholder={t('proxy.config.upstream_proxy.url_placeholder', '例如: http://127.0.0.1:7890')}
+                                                    value={formData.proxy?.upstream_proxy?.url || ''}
+                                                    onChange={(e) => setFormData({
+                                                        ...formData,
+                                                        proxy: {
+                                                            ...formData.proxy,
+                                                            upstream_proxy: {
+                                                                ...formData.proxy?.upstream_proxy,
+                                                                url: e.target.value
+                                                            }
+                                                        }
+                                                    })}
+                                                />
+                                            </div>
+                                            <div className="mt-4 bg-amber-50/40 dark:bg-amber-900/10 rounded-xl p-3.5 border border-amber-100/50 dark:border-amber-800/20 text-[11px] text-amber-700 dark:text-amber-400 flex items-start gap-3 transition-colors hover:bg-amber-50/60">
+                                                <div className="mt-0.5 p-1 bg-amber-100/80 dark:bg-amber-800/40 rounded-lg shadow-sm">
+                                                    <Network size={12} className="text-amber-600 dark:text-amber-400" />
+                                                </div>
+                                                <div className="leading-relaxed">
+                                                    <span className="font-bold mr-1.5 opacity-80 uppercase tracking-tighter">Tip:</span>
+                                                    {t('proxy.config.upstream_proxy.socks5h_hint', '若需避开上游风控并保留原始域名解析 (Remote DNS)，请手动将协议改为 socks5h://')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -1016,9 +1172,9 @@ function Settings() {
                                     </div>
 
                                     <div>
-                                        <h3 className="text-3xl font-black text-gray-900 dark:text-base-content tracking-tight mb-2">Antigravity Tools</h3>
+                                        <h3 className="text-3xl font-black text-gray-900 dark:text-base-content tracking-tight mb-2">{t('common.app_name', 'Antigravity Tools')}</h3>
                                         <div className="flex items-center justify-center gap-2 text-sm">
-                                            v4.1.6
+                                            v4.1.10
                                             <span className="text-gray-400 dark:text-gray-600">•</span>
                                             <span className="text-gray-500 dark:text-gray-400">{t('settings.branding.subtitle')}</span>
                                         </div>

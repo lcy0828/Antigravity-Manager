@@ -14,7 +14,6 @@ import {
     Terminal,
     Trash2,
     BrainCircuit,
-    Layers,
     Puzzle,
     Zap,
     ArrowRight,
@@ -36,6 +35,7 @@ import { CliSyncCard } from '../components/proxy/CliSyncCard';
 import DebouncedSlider from '../components/common/DebouncedSlider';
 import { listAccounts } from '../services/accountService';
 import CircuitBreaker from '../components/settings/CircuitBreaker';
+import AdvancedThinking from '../components/settings/AdvancedThinking';
 import { CircuitBreakerConfig } from '../types/config';
 
 interface ProxyStatus {
@@ -1466,18 +1466,16 @@ print(response.text)`;
                 {
                     !configLoading && !configError && appConfig && (
                         <div className="space-y-4">
-                            <div className="px-1 flex items-center gap-2 text-gray-400">
-                                <Layers size={14} />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">
-                                    {t('proxy.config.external_providers.title', { defaultValue: 'External Providers' })}
-                                </span>
-                            </div>
-
-                            {/* CLI 同步卡片 - 支持桌面端与 Web 端 */}
-                            <CliSyncCard
-                                proxyUrl={status.running ? status.base_url : `http://127.0.0.1:${appConfig.proxy.port || 8045}`}
-                                apiKey={appConfig.proxy.api_key}
-                            />
+                            <CollapsibleCard
+                                title={t('proxy.cli_sync.title', { defaultValue: 'CLI Sync' })}
+                                icon={<Terminal size={18} className="text-gray-500" />}
+                                defaultExpanded={false}
+                            >
+                                <CliSyncCard
+                                    proxyUrl={status.running ? status.base_url : `http://127.0.0.1:${appConfig.proxy.port || 8045}`}
+                                    apiKey={appConfig.proxy.api_key}
+                                />
+                            </CollapsibleCard>
 
                             {/* z.ai (GLM) Dispatcher */}
                             <CollapsibleCard
@@ -1873,6 +1871,17 @@ print(response.text)`;
                                 </div>
                             </CollapsibleCard>
 
+                            {/* Advanced Thinking & Global Config */}
+                            <CollapsibleCard
+                                title={t('settings.advanced_thinking.title', { defaultValue: 'Advanced Thinking & Global Config' })}
+                                icon={<BrainCircuit size={18} className="text-pink-500" />}
+                            >
+                                <AdvancedThinking
+                                    config={appConfig.proxy}
+                                    onChange={(newProxyConfig) => updateProxyConfig(newProxyConfig)}
+                                />
+                            </CollapsibleCard>
+
                             {/* 实验性设置 */}
                             <CollapsibleCard
                                 title={t('proxy.config.experimental.title')}
@@ -2206,8 +2215,8 @@ print(response.text)`;
                                                 }
                                             }}
                                             className={`p-2 rounded-lg transition-all h-9 w-9 flex items-center justify-center border border-transparent ${selectedPreset.startsWith('custom_')
-                                                    ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-100 dark:hover:border-red-900/30'
-                                                    : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                                                ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-100 dark:hover:border-red-900/30'
+                                                : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                                                 }`}
                                             title={selectedPreset.startsWith('custom_')
                                                 ? t('proxy.router.delete_preset')
@@ -2274,9 +2283,15 @@ print(response.text)`;
                                     </div>
 
                                     <div className="flex items-center justify-between mb-3">
-                                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                            <ArrowRight size={14} /> {t('proxy.router.custom_mappings')}
-                                        </h3>
+                                        <div className="flex flex-col gap-1">
+                                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                                <ArrowRight size={14} /> {t('proxy.router.custom_mappings')}
+                                            </h3>
+                                            <p className="text-[9px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                                                💡 支持手动输入任意模型 ID,可体验未发布模型(如 <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-blue-600 dark:text-blue-400">claude-opus-4-6</code>)。
+                                                <span className="text-amber-600 dark:text-amber-400">注意:并非所有账号都支持未发布模型</span>
+                                            </p>
+                                        </div>
                                     </div>
                                     <div className="flex flex-col gap-4">
                                         {/* 当前映射列表 (置顶 2 列) */}
@@ -2303,6 +2318,7 @@ print(response.text)`;
                                                                                 options={customMappingOptions}
                                                                                 placeholder="Select..."
                                                                                 className="font-mono text-[10px] h-7 dark:bg-gray-800 border-blue-200 dark:border-blue-800"
+                                                                                allowCustomInput={true}
                                                                             />
                                                                         </div>
                                                                     ) : (
@@ -2383,6 +2399,7 @@ print(response.text)`;
                                                             options={customMappingOptions}
                                                             placeholder={t('proxy.router.select_target_model') || 'Select Target Model'}
                                                             className="font-mono text-[11px] h-8 dark:bg-gray-800"
+                                                            allowCustomInput={true}
                                                         />
                                                     </div>
                                                 </div>
